@@ -9,8 +9,24 @@ from io import BytesIO
 from funciones import (
     cargar_coleccion, guardar_coleccion, buscar_carta_api,
     extraer_datos_carta, agregar_a_coleccion, modificar_cantidad,
-    calcular_valor_total, carta_mas_repetida, tipo_mas_frecuente, promedio_hp
+    calcular_valor_total, cartas_mas_repetidas, tipo_mas_frecuente, promedio_hp
 )
+
+# Diccionario de colores temáticos por tipo elemental de Pokémon TCG
+COLORES_TIPOS = {
+    "Fire": "#EE8130",       # Naranja / Rojo Fuego
+    "Water": "#6390F0",      # Azul Agua
+    "Grass": "#7AC74C",      # Verde Planta
+    "Lightning": "#F7D02C",  # Amarillo Eléctrico
+    "Psychic": "#F95587",    # Rosado / Violeta Psíquico
+    "Fighting": "#C22E28",   # Marrón / Rojo Lucha
+    "Darkness": "#705746",   # Oscuro / Siniestro
+    "Metal": "#B7B7CE",      # Gris Metal
+    "Fairy": "#D685AD",      # Rosa Hada
+    "Dragon": "#6F35FC",     # Violeta Dragón
+    "Colorless": "#A8A878",  # Incoloro / Normal
+    "Incoloro": "#A8A878"
+}
 
 # Configuración de página
 st.set_page_config(
@@ -42,15 +58,23 @@ if menu == "📊 Mi Colección & Indicadores":
     if not coleccion:
         st.info("📭 Tu colección está vacía. Ir a 'Buscar & Agregar Cartas' para empezar.")
     else:
-        # Fila de Metricas e Indicadores
+        # Fila de Métricas e Indicadores
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Valor Total Estimado", f"${calcular_valor_total(coleccion):.2f} USD")
         col2.metric("Tipo Dominante", tipo_mas_frecuente(coleccion))
         col3.metric("Promedio de HP", f"{promedio_hp(coleccion):.1f}")
         
-        c_rep = carta_mas_repetida(coleccion)
-        if c_rep:
-            col4.metric("Carta más Repetida", f"{c_rep['nombre']} ({c_rep['cantidad']}x)")
+        # Lógica para manejar empates en las cartas más repetidas
+        c_repetidas = cartas_mas_repetidas(coleccion)
+        if c_repetidas:
+            cant_max = c_repetidas[0]['cantidad']
+            
+            # Si hay más de una carta con la cantidad máxima (empate)
+            if len(c_repetidas) > 1:
+                nombres = ", ".join([c['nombre'] for c in c_repetidas])
+                col4.metric("Cartas más Repetidas", f"{nombres} ({cant_max}x c/u)")
+            else:
+                col4.metric("Carta más Repetida", f"{c_repetidas[0]['nombre']} ({cant_max}x)")
 
         st.divider()
 
@@ -194,20 +218,50 @@ elif menu == "📈 Análisis Visual (Gráficos)":
         # Gráficos con Matplotlib
         col_g1, col_g2 = st.columns(2)
         
+        # GRÁFICO 1: Cantidad de Cartas por Tipo (Con colores específicos)
         with col_g1:
             st.subheader("Cantidad de Cartas por Tipo")
-            fig1, ax1 = plt.subplots()
             df_tipo = df.groupby('tipo')['cantidad'].sum()
-            df_tipo.plot(kind='bar', ax=ax1, color='#ffcb05', edgecolor='#3657a0', linewidth=1.5)
-            ax1.set_ylabel("Copias")
+            
+            # Asignación dinámica de colores según el tipo elemental
+            colores_barras = [COLORES_TIPOS.get(tipo, "#A8A878") for tipo in df_tipo.index]
+            
+            fig1, ax1 = plt.subplots(figsize=(6, 4))
+            barras1 = ax1.bar(df_tipo.index, df_tipo.values, color=colores_barras, edgecolor="black", linewidth=1.2)
+            
+            ax1.set_ylabel("Copias", fontweight="bold")
+            ax1.grid(axis="y", linestyle="--", alpha=0.4)
+            plt.xticks(rotation=30)
+            
+            # Mostrar el valor numérico arriba de cada barra
+            for b in barras1:
+                h = b.get_height()
+                ax1.annotate(f"{int(h)}",
+                             xy=(b.get_x() + b.get_width() / 2, h),
+                             xytext=(0, 3), textcoords="offset points",
+                             ha="center", va="bottom", fontweight="bold")
+                             
             st.pyplot(fig1)
 
+        # GRÁFICO 2: Valor ($ USD) por Rareza
         with col_g2:
             st.subheader("Valor ($ USD) por Rareza")
-            fig2, ax2 = plt.subplots()
             df_rareza = df.groupby('rareza')['valor_total_usd'].sum()
-            df_rareza.plot(kind='barh', ax=ax2, color='#e3350d', edgecolor='black')
-            ax2.set_xlabel("USD Total")
+            
+            fig2, ax2 = plt.subplots(figsize=(6, 4))
+            barras2 = ax2.barh(df_rareza.index, df_rareza.values, color='#e3350d', edgecolor='black', linewidth=1.2)
+            
+            ax2.set_xlabel("USD Total", fontweight="bold")
+            ax2.grid(axis="x", linestyle="--", alpha=0.4)
+            
+            # Mostrar el valor numérico al final de cada barra horizontal
+            for b in barras2:
+                w = b.get_width()
+                ax2.annotate(f"${w:.2f}",
+                             xy=(w, b.get_y() + b.get_height() / 2),
+                             xytext=(5, 0), textcoords="offset points",
+                             ha="left", va="center", fontweight="bold", fontsize=9)
+                             
             st.pyplot(fig2)
 
         st.divider()

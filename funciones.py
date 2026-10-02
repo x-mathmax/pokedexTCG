@@ -171,11 +171,19 @@ def calcular_valor_total(coleccion: List[Dict[str, Any]]) -> float:
     return sum(c.get("precio_usd", 0.0) * c.get("cantidad", 1) for c in coleccion)
 
 
-def carta_mas_repetida(coleccion: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
-    """Devuelve la carta con mayor número de copias."""
+def cartas_mas_repetidas(coleccion: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Devuelve una lista con todas las cartas que poseen la mayor cantidad de copias."""
     if not coleccion:
-        return None
-    return max(coleccion, key=lambda c: c.get("cantidad", 0))
+        return []
+    
+    # 1. Buscamos cuál es el número máximo de copias en la colección
+    max_cant = max(c.get("cantidad", 0) for c in coleccion)
+    
+    if max_cant == 0:
+        return []
+    
+    # 2. Filtramos todas las cartas que tengan exactamente esa cantidad máxima
+    return [c for c in coleccion if c.get("cantidad", 0) == max_cant]
 
 
 def tipo_mas_frecuente(coleccion: List[Dict[str, Any]]) -> str:

@@ -19,7 +19,7 @@
         "hp": 40,
         "precio_usd": 2.5,
         "imagen_url": "https://images.pokemontcg.io/base1/58.png",
-        "cantidad": 3
+        "cantidad": 4
     },
     {
         "id": "swsh3-81",
@@ -31,5 +31,16 @@
         "precio_usd": 0.51,
         "imagen_url": "https://images.pokemontcg.io/swsh3/81.png",
         "cantidad": 1
+    },
+    {
+        "id": "sm12-96",
+        "nombre": "Mimikyu",
+        "tipo": "Psychic",
+        "rareza": "Uncommon",
+        "set": "Cosmic Eclipse",
+        "hp": 70,
+        "precio_usd": 12.6,
+        "imagen_url": "https://images.pokemontcg.io/sm12/96.png",
+        "cantidad": 4
     }
 ]
