@@ -1,3 +1,4 @@
+import time
 import json
 import os
 from typing import Dict, List, Optional, Any
@@ -37,17 +38,59 @@ def guardar_coleccion(coleccion: List[Dict[str, Any]], filepath: str = DATA_FILE
 # CONSULTAS A LA API
 # ---------------------------------------------------------
 def buscar_carta_api(nombre: str) -> List[Dict[str, Any]]:
-    """Busca cartas por nombre en la API pública de Pokémon TCG."""
-    try:
-        response = requests.get(f"{API_URL}?q=name:\"{nombre}\"", timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        return data.get("data", [])
-    except requests.RequestException as e:
-        print(f"[Error de Conexión/API] {e}")
+    """
+    Busca cartas por nombre en la API pública de Pokémon TCG.
+    Parsea automáticamente el texto ingresado para formatearlo con Title Case (ej: "lugia" -> "Lugia").
+    """
+    if not nombre or not nombre.strip():
         return []
+    
+    # Capitalizamos el nombre: primera letra en mayúscula, resto en minúsculas
+    # "charmander" -> "Charmander", "LUGIA" -> "Lugia"
+    nombre_formateado = nombre.strip().capitalize()
+    
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+    
+    # Probamos con la sintaxis exacta de la API usando el nombre parseado
+    urls_a_probar = [
+        f'{API_URL}?q=name:"{nombre_formateado}"&pageSize=100',
+        f'{API_URL}?q=name:{nombre_formateado}&pageSize=100'
+    ]
+    
+    for url in urls_a_probar:
+        for intento in range(2):
+            try:
+                response = requests.get(url, headers=headers, timeout=12)
+                
+                # Éxito
+                if response.status_code == 200:
+                    data = response.json()
+                    res = data.get("data", [])
+                    if res:
+                        return res
+                
+                # Error de cliente (400, 404): No reintentar esta URL
+                if 400 <= response.status_code < 500:
+                    break
+                
+                # Error de servidor (500, 502, 503): Esperar brevemente y reintentar
+                if response.status_code in [500, 502, 503, 504]:
+                    if intento == 0:
+                        time.sleep(1)
+                        continue
 
+            except (requests.Timeout, requests.ConnectionError):
+                if intento == 0:
+                    time.sleep(1)
+                    continue
+            except requests.RequestException:
+                break
 
+    print(f"[Aviso API] No se obtuvieron resultados para '{nombre_formateado}'.")
+    return []
+    
 def extraer_datos_carta(carta_raw: Dict[str, Any]) -> Dict[str, Any]:
     """Extrae y normaliza los datos relevantes de la respuesta de la API."""
     card_id = carta_raw.get("id", "Desconocido")
@@ -84,7 +127,7 @@ def extraer_datos_carta(carta_raw: Dict[str, Any]) -> Dict[str, Any]:
         "id": card_id,
         "nombre": name,
         "tipo": tipo_principal,
-        "raraza": rarity,
+        "rareza": rarity,
         "set": set_name,
         "hp": hp,
         "precio_usd": price,
@@ -128,11 +171,19 @@ def calcular_valor_total(coleccion: List[Dict[str, Any]]) -> float:
     return sum(c.get("precio_usd", 0.0) * c.get("cantidad", 1) for c in coleccion)
 
 
-def carta_mas_repetida(coleccion: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
-    """Devuelve la carta con mayor número de copias."""
+def cartas_mas_repetidas(coleccion: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Devuelve una lista con todas las cartas que poseen la mayor cantidad de copias."""
     if not coleccion:
-        return None
-    return max(coleccion, key=lambda c: c.get("cantidad", 0))
+        return []
+    
+    # 1. Buscamos cuál es el número máximo de copias en la colección
+    max_cant = max(c.get("cantidad", 0) for c in coleccion)
+    
+    if max_cant == 0:
+        return []
+    
+    # 2. Filtramos todas las cartas que tengan exactamente esa cantidad máxima
+    return [c for c in coleccion if c.get("cantidad", 0) == max_cant]
 
 
 def tipo_mas_frecuente(coleccion: List[Dict[str, Any]]) -> str:

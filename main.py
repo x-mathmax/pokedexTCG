@@ -40,7 +40,7 @@ def main():
             for i, carta_raw in enumerate(resultados[:5]):
                 c = extraer_datos_carta(carta_raw)
                 precio_str = f"${c['precio_usd']:.2f} USD" if c['precio_usd'] > 0 else "Precio no disponible"
-                print(f"[{i+1}] {c['nombre']} (ID: {c['id']}) | Set: {c['set']} | Rareza: {c['raraza']} | {precio_str}")
+                print(f"[{i+1}] {c['nombre']} (ID: {c['id']}) | Set: {c['set']} | Rareza: {c['rareza']} | {precio_str}")
 
             sel = validar_entero_positivo("Ingresá el número de la carta que querés agregar (0 para cancelar): ")
             if 1 <= sel <= min(5, len(resultados)):
@@ -70,14 +70,14 @@ def main():
                 filtrados = [c for c in coleccion if c.get("tipo", "").lower() == tipo_buscado]
             elif criterio == "2":
                 rareza_buscada = input("Ingresá la rareza (ej. Common, Rare, Rare Holo): ").strip().lower()
-                filtrados = [c for c in coleccion if rareza_buscada in c.get("raraza", "").lower()]
+                filtrados = [c for c in coleccion if rareza_buscada in c.get("rareza", "").lower()]
             else:
                 print("Opción inválida.")
                 continue
 
             print(f"\nResultados encontrados ({len(filtrados)}):")
             for c in filtrados:
-                print(f"• {c['nombre']} (ID: {c['id']}) - Tipo: {c['tipo']} - Rareza: {c['raraza']} - Copias: {c['cantidad']}")
+                print(f"• {c['nombre']} (ID: {c['id']}) - Tipo: {c['tipo']} - Rareza: {c['rareza']} - Copias: {c['cantidad']}")
 
         elif opcion == "4":
             if not coleccion:
